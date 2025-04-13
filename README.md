@@ -1,4 +1,6 @@
 # Titanic-Carpathia-Communication
+to be continued
+
 
 A historical simulation of Morse code radio communication between RMS Titanic and RMS Carpathia during the tragic events of April 14-15, 1912.
 
