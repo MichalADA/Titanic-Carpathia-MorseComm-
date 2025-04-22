@@ -52,12 +52,18 @@ class TitanicRadioStation:
         Inicjalizuje aplikację stacji radiowej
         
         Args:
-            root (tk.Tk): Główne okno aplikacji
+            root (tk.Tk lub tk.Frame): Główne okno lub ramka aplikacji
         """
         self.root = root
-        self.root.title("Radio Titanica - RMS Titanic")
-        self.root.geometry("800x600")
-        self.root.minsize(600, 500)
+        
+        # Sprawdzamy czy root jest głównym oknem czy ramką
+        if isinstance(root, tk.Tk):
+            self.is_main_window = True
+            self.root.title("Radio Titanica - RMS Titanic")
+            self.root.geometry("800x600")
+            self.root.minsize(600, 500)
+        else:
+            self.is_main_window = False
         
         # Ustawienie stylu historycznego
         self.set_historical_style()
@@ -89,7 +95,8 @@ class TitanicRadioStation:
                       font=("Times New Roman", 11),
                       background="#8B4513")
         
-        self.root.configure(background="#d2b48c")  # Ustawienie koloru tła
+        if self.is_main_window:
+            self.root.configure(background="#d2b48c")  # Ustawienie koloru tła
         
     def create_widgets(self):
         """Tworzy wszystkie widgety dla interfejsu użytkownika"""
@@ -136,8 +143,7 @@ class TitanicRadioStation:
             width=50
         )
         message_combo.pack(fill=tk.X, pady=(0, 10))
-        message_combo.bind("<<ComboboxSelected>>", 
-                         lambda e: self.custom_message.delete(1.0, tk.END).insert(tk.END, self.message_var.get()))
+        message_combo.bind("<<ComboboxSelected>>", self.update_custom_message)
         
         # Niestandardowa wiadomość
         ttk.Label(
@@ -213,6 +219,11 @@ class TitanicRadioStation:
             style="Historical.TLabel"
         )
         status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+    
+    def update_custom_message(self, event):
+        """Aktualizuje pole wiadomości własnej po wybraniu opcji z listy"""
+        self.custom_message.delete("1.0", tk.END)
+        self.custom_message.insert(tk.END, self.message_var.get())
     
     def log_message(self, message, is_transmitted=False):
         """Dodaje wiadomość do logu komunikacji"""

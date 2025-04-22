@@ -52,12 +52,18 @@ class CarpathiaRadioStation:
         Inicjalizuje aplikację stacji radiowej
         
         Args:
-            root (tk.Tk): Główne okno aplikacji
+            root (tk.Tk lub tk.Frame): Główne okno lub ramka aplikacji
         """
         self.root = root
-        self.root.title("Radio Carpathii - RMS Carpathia")
-        self.root.geometry("800x600")
-        self.root.minsize(600, 500)
+        
+        # Sprawdzamy czy root jest głównym oknem czy ramką
+        if isinstance(root, tk.Tk):
+            self.is_main_window = True
+            self.root.title("Radio Carpathii - RMS Carpathia")
+            self.root.geometry("800x600")
+            self.root.minsize(600, 500)
+        else:
+            self.is_main_window = False
         
         # Ustawienie stylu historycznego
         self.set_historical_style()
@@ -89,7 +95,8 @@ class CarpathiaRadioStation:
                       font=("Times New Roman", 11),
                       background="#2F4F4F")
         
-        self.root.configure(background="#e8dbc5")  # Ustawienie koloru tła
+        if self.is_main_window:
+            self.root.configure(background="#e8dbc5")  # Ustawienie koloru tła
         
     def create_widgets(self):
         """Tworzy wszystkie widgety dla interfejsu użytkownika"""
@@ -136,8 +143,7 @@ class CarpathiaRadioStation:
             width=50
         )
         message_combo.pack(fill=tk.X, pady=(0, 10))
-        message_combo.bind("<<ComboboxSelected>>", 
-                         lambda e: self.custom_message.delete(1.0, tk.END).insert(tk.END, self.message_var.get()))
+        message_combo.bind("<<ComboboxSelected>>", self.update_custom_message)
         
         # Niestandardowa wiadomość
         ttk.Label(
@@ -214,6 +220,11 @@ class CarpathiaRadioStation:
         )
         status_bar.pack(side=tk.BOTTOM, fill=tk.X)
     
+    def update_custom_message(self, event):
+        """Aktualizuje pole wiadomości własnej po wybraniu opcji z listy"""
+        self.custom_message.delete("1.0", tk.END)
+        self.custom_message.insert(tk.END, self.message_var.get())
+    
     def log_message(self, message, is_transmitted=False):
         """Dodaje wiadomość do logu komunikacji"""
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -241,7 +252,10 @@ class CarpathiaRadioStation:
             self.root.update()
             time.sleep(1 + random.random())  # Opóźnienie nawiązywania łączności
             
-            # Odtworzenie dźwięku przed nadaniem
+            # Odtworzenie dźwięku podczas nadawania
+            threading.Thread(target=play_morse_with_simple_beep, args=(morse_code, self.status_callback), daemon=True).start()
+            
+            # Ustawienie statusu nadawania
             self.status_var.set("Nadawanie wiadomości...")
             self.root.update()
             
@@ -266,7 +280,7 @@ class CarpathiaRadioStation:
         """Szybkie nadanie standardowej odpowiedzi"""
         quick_message = "CARPATHIA ON WAY. ETA 0400 HOURS."
         self.custom_message.delete("1.0", tk.END)
-        self.custom_message.insert("1.0", quick_message)
+        self.custom_message.insert(tk.END, quick_message)
         self.transmit_message()
     
     def send_message_to_titanic(self, message, morse_code):
@@ -340,6 +354,9 @@ class CarpathiaRadioStation:
             # Symulacja odbioru - migająca lampka
             self.blink_indicator(morse_code)
             
+            # Odtwarzanie dźwięku odebranej wiadomości
+            threading.Thread(target=play_morse_with_simple_beep, args=(morse_code, self.status_callback), daemon=True).start()
+            
             # Dodanie wiadomości do logu
             self.log_message(message)
             
@@ -353,11 +370,16 @@ class CarpathiaRadioStation:
         finally:
             self.receiving = False
     
+    def status_callback(self, message):
+        """Callback do aktualizacji statusu podczas odtwarzania dźwięku"""
+        self.status_var.set(message)
+        self.root.update()
+    
     def auto_respond_to_distress(self):
         """Automatycznie odpowiada na sygnał SOS"""
         random_response = random.choice(CARPATHIA_MESSAGES)
         self.custom_message.delete("1.0", tk.END)
-        self.custom_message.insert("1.0", random_response)
+        self.custom_message.insert(tk.END, random_response)
         self.transmit_message()
     
     def blink_indicator(self, morse_code):
